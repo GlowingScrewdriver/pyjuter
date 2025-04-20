@@ -35,6 +35,9 @@ class NotAstNode (AST):
 class Module:
     @classmethod
     def from_py (cls, source: str):
+        """
+        Construct from Python source code read from `source`.
+        """
         res = cls ()
         res.src = source
         res.ast = parse (res.src)
@@ -60,6 +63,9 @@ class Module:
 
     @classmethod
     def from_ipynb (cls, source: str):
+        """
+        Construct from a Jupyter Notebook read from `source`.
+        """
         nb = reads (source, as_version = 4)
         cell_srcs = []
         for cell in nb.cells:
@@ -68,7 +74,10 @@ class Module:
         src = "\n".join (cell_srcs)
         return cls.from_py (src)
 
-    def to_py (self):
+    def to_py (self) -> str:
+        """
+        Render as Python source.
+        """
         res = ""
         for decl in self.ast.body:
             try:
@@ -78,7 +87,10 @@ class Module:
 
         return res
 
-    def to_ipynb (self):
+    def to_ipynb (self) -> str:
+        """
+        Render as Jupyter Notebook.
+        """
         nb = new_notebook ()
         for decl in self.ast.body:
             src = get_source_segment (self.src, decl)
