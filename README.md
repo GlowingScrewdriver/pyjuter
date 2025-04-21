@@ -1,6 +1,9 @@
 # Pyjuter
 Convert between Python and Jupyter Notebooks with ease
 
+For detailed reference documentation, see the
+[generated API docs](https://glowingscrewdriver.github.io/pyjuter)
+
 ## Example usage:
 This example
 
@@ -14,7 +17,7 @@ This example
 5. Compares the resulting Python code with the original, _byte for byte_.
 
 ```python
-from pyju.conversion import Module
+from pyjuter.conversion import Module
 
 ## Test it on pyjuter's source itself by taking
 ## a Python file on a round trip to Jupyter and back
@@ -37,7 +40,7 @@ py_src_2 = module_2.to_py ()
 with open ("out.py", "w") as f:
     f.write (py_src_2)
 
-print ("Test result: {py_src_1 == py_src_2}")
+print ("Test result: f{py_src_1 == py_src_2}")
 ```
 
 ## Caveats
