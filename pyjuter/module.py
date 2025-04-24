@@ -15,26 +15,47 @@ from nbformat.v4 import (
     new_code_cell,
 )
 from collections.abc import Iterable
+from typing import Self
+from ast import parse
 
+module_shim = """
+import sys
+class ModuleShim:
+    def __init__ (self, names):
+        globe = globals ()
+        self.__dict__ = {
+            name: globe [name]
+            for name in names
+        }
+""".strip ()
+import_shim = """
+sys.modules [{module}] = ModuleShim ({names})
+""".strip ()
 
 class Module:
     @classmethod
-    def from_py (cls, source: str):
+    def from_py (cls, source: str) -> Self:
         """
         Construct from Python source code read from `source`.
         """
         res = cls ()
+        res.metadata = {
+            "language_info": {
+                "name": "python",
+            }
+        }
         lines = source.split ("\n")
-        res.chunks = split_toplevel_stmts (lines)
+        res.chunks = [*split_toplevel_stmts (lines)]
         return res
 
     @classmethod
-    def from_ipynb (cls, source: str):
+    def from_ipynb (cls, source: str) -> Self:
         """
         Construct from a Jupyter Notebook read from `source`.
         """
         res = cls ()
         res.chunks = []
+        res.metadata = nb ["metadata"]
         nb = reads (source, as_version = 4)
         for cell in nb.cells:
             # TODO: Verify cell type
@@ -52,13 +73,35 @@ class Module:
         Render as Jupyter Notebook.
         """
         nb = new_notebook ()
-        for chunk in self.chunks:
+        for chunk in (module_shim, *self.chunks):
             cell = new_code_cell (source = chunk)
             nb.cells.append (cell)
 
         validate (nb)
         return writes (nb)
 
+    def inline (self, other: Self, modname: str):
+        """
+        Inline `other` into `self`. This entails including all
+        of `other`'s chunks in `self` and setting up the import
+        shim to allow access to `other`'s contents.
+        """
+        names = []
+        for chunk in other.chunks:
+            chunk_ast = parse (chunk)
+            for s in chunk_ast.body:
+                if "names" in s._fields:
+                    s_names = [n.name for n in s.names]
+                elif "name" in s._fields:
+                    s_names = [s.name]
+                names.extend (s_names)
+        shim = import_shim.format (module = repr(modname), names = repr(names))
+
+        self.chunks = [
+            *other.chunks,
+            shim,
+            *self.chunks,
+        ]
 
 def split_toplevel_stmts (source: Iterable[str]) -> Iterable[str]:
     """
