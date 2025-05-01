@@ -20,20 +20,20 @@ def convert (*, input: str, output: str, inline: list[str]):
             )
     out_fmt = split_ext (output)[1]
 
-    inline_mods = []  # Input, followed by inlined modules and their names
-    for inp in (input, *inline):
-        name, fmt = split_ext (inp)
-        with open (inp) as inp_f:
-            source = inp_f.read ()
-        match fmt:
-            case "ipynb": mod = Module.from_ipynb (source)
-            case "py": mod = Module.from_py (source)
-            case _: assert False
-        inline_mods.append ((mod, name))
+    name, fmt = split_ext (input)
+    with open (input) as inp_f:
+        source = inp_f.read ()
+    match fmt:
+        case "ipynb": input_mod = Module.from_ipynb (source)
+        case "py": input_mod = Module.from_py (source)
+        case _: assert False
 
-    input_mod = inline_mods [0][0]
-    for mod, name in inline_mods [1:]:
-        input_mod.inline (mod, name)
+    for inp in inline:
+        name, fmt = split_ext (inp)
+        if fmt != "py":
+            raise Exception (f"Inlined file must be Python source: {inp}")
+        with open (inp) as inp_f:
+            input_mod.inline (inp_f.read (), name)
 
     match out_fmt:
         case "ipynb": res = input_mod.to_ipynb ()

@@ -20,7 +20,40 @@ from typing import Self
 from pyjuter.shims import module_setup_shim, chunk_as_module
 
 
+class Chunk:
+    """
+    A single code chunk. This can be a part of a file from a Python
+    source tree or a cell in a Jupyter Notebook.
+    """
+    file: str | None
+    """
+    The Python source file from which this chunk originated;
+    `None` in the case of the main module.
+    """
+    modname: str
+    # TODO: Is this redundant?
+    "The name of the module that this chunk belongs to"
+    source: str
+    "Cell's source content"
+
+    def __init__ (self, source: str) -> Self:
+        self.source = source
+
+    def as_nb_cell (self) -> dict:
+        "Render as a Jupyter Notebook cell"
+        return new_code_cell (source = self.source)
+
+    def as_py (self) -> str:
+        "Render as a chunk of Python source"
+        return self.source
+
 class Module:
+    """
+    Abstraction of Python source trees and Jupyter Notebooks.
+    """
+
+    cells: list[Chunk]
+
     @classmethod
     def from_py (cls, source: str) -> Self:
         """
@@ -32,8 +65,10 @@ class Module:
                 "name": "python",
             }
         }
-        lines = source.split ("\n")
-        res.chunks = [*split_toplevel_stmts (lines)]
+        res.chunks = [
+            Chunk (c)
+            for c in split_toplevel_stmts (source)
+        ]
         return res
 
     @classmethod
@@ -41,47 +76,60 @@ class Module:
         """
         Construct from a Jupyter Notebook read from `source`.
         """
-        res = cls ()
-        res.chunks = []
-        res.metadata = nb ["metadata"]
         nb = reads (source, as_version = 4)
-        for cell in nb.cells:
+        res = cls ()
+        res.metadata = nb ["metadata"]
+        res.chunks = [
             # TODO: Verify cell type
-            res.chunks.append (cell.source)
+            Chunk (cell.source)
+            for cell in nb.cells
+        ]
         return res
 
     def to_py (self) -> str:
         """
         Render as Python source.
         """
-        return "\n".join (self.chunks)
+        return "\n".join ((
+            c.as_py ()
+            for c in self.chunks
+        ))
 
     def to_ipynb (self) -> str:
         """
         Render as Jupyter Notebook.
         """
         nb = new_notebook ()
-        for chunk in (module_setup_shim, *self.chunks):
-            cell = new_code_cell (source = chunk)
-            nb.cells.append (cell)
+        cells = (
+            c.as_nb_cell ()
+            for c in self.chunks
+        )
+        nb.cells = [
+            new_code_cell (source = module_setup_shim),
+            *cells,
+        ]
 
         validate (nb)
         return writes (nb)
 
-    def inline (self, other: Self, modname: str):
+    def inline (self, other: str, modname: str):
         """
         Inline `other` into `self`. This entails including all
         of `other`'s chunks in `self` and setting up the import
         shim to allow access to `other`'s contents.
         """
+        other_chunks = (
+            Chunk (chunk_as_module (modname, c))
+            for c in split_toplevel_stmts (other)
+        )
         # TODO: Operate on cells instead of chunks, so we can do
         # some metadata magic
         self.chunks = [
-            *(chunk_as_module (modname, chunk) for chunk in other.chunks),
+            *other_chunks,
             *self.chunks,
         ]
 
-def split_toplevel_stmts (source: Iterable[str]) -> Iterable[str]:
+def split_toplevel_stmts (source: str) -> Iterable[str]:
     """
     Split the provided Python source into chunks on the basis of
     blank lines between top-level statements.
@@ -96,7 +144,7 @@ def split_toplevel_stmts (source: Iterable[str]) -> Iterable[str]:
     """
     chunk = []
     lastline = None
-    for line in source:
+    for line in source.split ("\n"):
         if line:
             if not line [0].isspace ():
                 # This is the beginning of a statement ... ->
