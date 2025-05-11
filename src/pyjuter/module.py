@@ -17,7 +17,7 @@ from nbformat.v4 import (
 from collections.abc import Iterable
 from typing import Self
 
-from pyjuter.shims import module_setup_shim, chunk_as_module
+import pyjuter.shims as shims
 
 
 class Chunk:
@@ -30,18 +30,27 @@ class Chunk:
     The Python source file from which this chunk originated;
     `None` in the case of the main module.
     """
-    modname: str
-    # TODO: Is this redundant?
-    "The name of the module that this chunk belongs to"
-    source: str
-    "Cell's source content"
 
-    def __init__ (self, source: str) -> Self:
+    def __init__ (self, source: str, modname: str = None, *, importable = False) -> Self:
         self.source = source
+        if importable:
+            assert modname is not None
+        self.modname = modname
+        self.importable = importable
 
     def as_nb_cell (self) -> dict:
         "Render as a Jupyter Notebook cell"
-        return new_code_cell (source = self.source)
+        if self.importable:
+            pre = shims.importable_pre.format (module_name = self.modname)
+            post = shims.importable_post
+            src = "".join ((
+                pre,
+                self.source,
+                post,
+            ))
+        else:
+            src = self.source
+        return new_code_cell (source = src)
 
     def as_py (self) -> str:
         "Render as a chunk of Python source"
@@ -105,7 +114,7 @@ class Module:
             for c in self.chunks
         )
         nb.cells = [
-            new_code_cell (source = module_setup_shim),
+            new_code_cell (source = shims.module_setup_shim),
             *cells,
         ]
 
@@ -119,7 +128,7 @@ class Module:
         shim to allow access to `other`'s contents.
         """
         other_chunks = (
-            Chunk (chunk_as_module (modname, c))
+            Chunk (c, modname = modname, importable = True)
             for c in split_toplevel_stmts (other)
         )
         self.chunks = [

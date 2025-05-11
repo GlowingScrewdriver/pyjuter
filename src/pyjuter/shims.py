@@ -26,19 +26,14 @@ class _pyjuter_ModuleShim:
                 self.__setattr__ (name, new_globals [name])
 """
 
-cell_shims = (
+importable_pre = (
     # Goes at the top of the cell
     "_pyjuter_module = _pyjuter_ModuleShim.get ('{module_name}')\n"
-    "_pyjuter_old_global_names = set (globals ().keys ())\n\n",
-
-    # Goes at the bottom of the cell
-    "\n_pyjuter_new_globals = globals ()\n"
-    "_pyjuter_module.populate (_pyjuter_old_global_names, _pyjuter_new_globals)\n",
+    "_pyjuter_old_global_names = set (globals ().keys ())\n\n"
 )
 
-def chunk_as_module (module_name: str, chunk: str):
-    return "".join ((
-        cell_shims [0].format (module_name = module_name),
-        chunk,
-        cell_shims [1],
-    ))
+importable_post = (
+    # Goes at the bottom of the cell
+    "\n_pyjuter_new_globals = globals ()\n"
+    "_pyjuter_module.populate (_pyjuter_old_global_names, _pyjuter_new_globals)\n"
+)
