@@ -6,7 +6,7 @@ and vice-versa.
 """
 
 from nbformat import (
-    reads,
+    reads,    # TODO: Import with an alias?
     writes,
     validate,
 )
@@ -122,8 +122,6 @@ class Module:
             Chunk (chunk_as_module (modname, c))
             for c in split_toplevel_stmts (other)
         )
-        # TODO: Operate on cells instead of chunks, so we can do
-        # some metadata magic
         self.chunks = [
             *other_chunks,
             *self.chunks,
