@@ -41,14 +41,45 @@ importable_post = (
     "_pyjuter_module.populate (_pyjuter_old_global_names, _pyjuter_new_globals)\n"
 )
 
-def digest (shim: str) -> Dict[str, int]:
+def digest (shim: str, mode: str) -> Dict[str, int|str]:
     """
     Generate the digest for shim `str`.
-    Returns a dictionary of the form:
-    `{"len": int, "sum": int}`
+    `mode` is one of "pre" and "post".
+
+    Returns a dictionary of the form
+    `{"len": int, "start": int, "sum": int}`.
+
+    Note: a negative index counts backwards from the end
+    of a string; so -2 points to the second-last character.
     """
     b_shim = bytes (shim, encoding = "ascii")
+    length = len (shim)
+    assert mode == "pre" or mode == "post", (
+        "`mode` must be either 'pre' or 'post'"
+    )
+
     return {
-        "len": len (b_shim),
+        "len": length,
+        "mode": mode,
         "sum": adler32 (b_shim),
     }
+
+def strip_shim (source: str, shim_digest: Dict[str, int]) -> str | None:
+    """
+    Strip a shim from `source`. The expected checksum and position,
+    recorded by `shim_digest`, are used to find and validate the shim.
+    """
+    length, mode = shim_digest ["len"], shim_digest ["mode"]
+    match mode:
+        case "pre":
+            shim = source [0:length]
+            code = source [length:]
+        case "post":
+            code = source [0:-length]
+            shim = source [-length:]
+        case _: raise Exception ("Invalid mode: `mode`")
+
+    if adler32 (bytes (shim, encoding = "ascii")) != shim_digest ["sum"]:
+        return None
+
+    return code
