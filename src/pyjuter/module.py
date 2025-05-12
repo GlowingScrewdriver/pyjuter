@@ -40,6 +40,8 @@ class Chunk:
 
     def as_nb_cell (self) -> dict:
         "Render as a Jupyter Notebook cell"
+        cell = new_pyjuter_code_cell ()
+
         if self.importable:
             pre = shims.importable_pre.format (module_name = self.modname)
             post = shims.importable_post
@@ -48,9 +50,15 @@ class Chunk:
                 self.source,
                 post,
             ))
+            cell.metadata.pyjuter.shims = {
+                "pre": shims.digest (pre),
+                "post": shims.digest (post),
+            }
         else:
             src = self.source
-        return new_code_cell (source = src)
+
+        cell.source = src
+        return cell
 
     def as_py (self) -> str:
         "Render as a chunk of Python source"
@@ -166,3 +174,11 @@ def split_toplevel_stmts (source: str) -> Iterable[str]:
     # Don't forget the last chunk!
     if chunk:
         yield "\n".join (chunk)
+
+def new_pyjuter_code_cell ():
+    """Wrapper around `new_code_cell`"""
+    cell = new_code_cell ()
+    cell.metadata.pyjuter = {
+        "shims": None,
+    }
+    return cell

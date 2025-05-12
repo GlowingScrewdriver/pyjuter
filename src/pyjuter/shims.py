@@ -5,6 +5,9 @@ Variable names in the shims are prefixed with `_pyjuter_`
 to prevent conflicts with names used in the code being handle.
 """
 
+from zlib import adler32
+from typing import Dict
+
 module_setup_shim = """
 # Not sure why this should be hidden ...
 import sys as _pyjuter_sys
@@ -37,3 +40,15 @@ importable_post = (
     "\n_pyjuter_new_globals = globals ()\n"
     "_pyjuter_module.populate (_pyjuter_old_global_names, _pyjuter_new_globals)\n"
 )
+
+def digest (shim: str) -> Dict[str, int]:
+    """
+    Generate the digest for shim `str`.
+    Returns a dictionary of the form:
+    `{"len": int, "sum": int}`
+    """
+    b_shim = bytes (shim, encoding = "ascii")
+    return {
+        "len": len (b_shim),
+        "sum": adler32 (b_shim),
+    }
