@@ -26,17 +26,19 @@ class Chunk:
     source tree or a cell in a Jupyter Notebook.
     """
 
-    def __init__ (self, source: str, modname: str|None, *, importable: bool):
+    def __init__ (self, source: str, modname: str|None, filename: str):
         self.source = source
-        if importable:
-            assert modname is not None
         self.modname = modname
-        self.importable = importable
+        self.filename = filename
 
     @classmethod
-    def from_py (cls, source: str, modname: str|None = None, *, importable = False) -> Self:
+    def from_py (
+            cls, source: str, *,
+            modname: str|None = None,
+            filename: str
+        ) -> Self:
         "Construct from Python source chunk"
-        res = cls (source, modname, importable = importable)
+        res = cls (source, modname, filename)
         return res
 
     @classmethod
@@ -52,15 +54,15 @@ class Chunk:
             if src is None:
                 raise Exception (f"Cell {cell.id} shim is corrupt!")
 
-        modname, importable = metadata.modname, metadata.importable
-        res = cls (src, modname, importable = importable)
+        modname, filename = metadata.modname, metadata.filename
+        res = cls (src, modname, filename)
         return res
 
     def as_nb_cell (self) -> dict:
         "Render as a Jupyter Notebook cell"
         cell = new_pyjuter_code_cell ()
 
-        if self.importable:
+        if self.modname is not None:
             pre = shims.importable_pre.format (module_name = self.modname)
             post = shims.importable_post
             src = "".join ((
@@ -72,11 +74,11 @@ class Chunk:
                 shims.digest (pre, mode = "pre"),
                 shims.digest (post, mode = "post"),
             ]
-            cell.metadata.pyjuter.importable = True
-            cell.metadata.pyjuter.modname = self.modname
         else:
             src = self.source
 
+        cell.metadata.pyjuter.modname = self.modname
+        cell.metadata.pyjuter.filename = self.filename
         cell.source = src
         return cell
 
@@ -93,7 +95,7 @@ class Module:
     metadata: dict
 
     @classmethod
-    def from_py (cls, source: str) -> Self:
+    def from_py (cls, source: str, filename: str) -> Self:
         """
         Construct from Python source code read from `source`.
         """
@@ -104,7 +106,7 @@ class Module:
             }
         }
         res.chunks = [
-            Chunk.from_py (c)
+            Chunk.from_py (c, filename = filename)
             for c in split_toplevel_stmts (source)
         ]
         return res
@@ -150,14 +152,14 @@ class Module:
         validate (nb)
         return writes (nb)
 
-    def inline (self, other: str, modname: str):
+    def inline (self, other: str, modname: str, filename: str):
         """
         Inline `other` into `self`. This entails including all
         of `other`'s chunks in `self` and setting up the import
         shim to allow access to `other`'s contents.
         """
         other_chunks = (
-            Chunk.from_py (c, modname = modname, importable = True)
+            Chunk.from_py (c, modname = modname, filename = filename)
             for c in split_toplevel_stmts (other)
         )
         self.chunks = [
@@ -204,7 +206,7 @@ def new_pyjuter_code_cell (*pargs, **kargs):
     cell = new_code_cell (*pargs, **kargs)
     cell.metadata.pyjuter = {
         "shims": (),
-        "importable": False,
+        "filename": None,
         "modname": None,
     }
     return cell

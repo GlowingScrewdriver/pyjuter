@@ -14,16 +14,26 @@ def convert_py_to_ipynb (inp: str, inline: list[tuple[str, str]], out: str):
     """
     with open (inp) as f:
         src = f.read ()
-    module = Module.from_py (src)
+    module = Module.from_py (src, inp)
 
     for modname, fname in inline:
         with open (fname) as f:
             src = f.read ()
-        module.inline (src, modname)
+        module.inline (src, modname, fname)
 
     with open (out, "w") as f:
         f.write (module.to_ipynb ())
 
+def convert_ipynb_to_py (inp: str):
+    """
+    Convert a Jupyter Notebook to the original Python
+    source files.
+    """
+    with open (inp) as f:
+        src = f.read ()
+    module = Module.from_ipynb (src)
+
+    print (module.to_py ())
 
 # Command line parsing utilities
 OPTION_COUNTS = {
@@ -35,7 +45,8 @@ OPTION_COUNTS = {
 }
 COMMAND_OPTIONS = {
     # Options allowed for each command
-    "p2j": {"-inline", "-input", "-output"}
+    "p2j": {"-inline", "-input", "-output"},
+    "j2p": {"-input"},
 }
 
 def process_args (args: list[str]):
@@ -96,6 +107,8 @@ def dispatch_command (cmd: str, opts: dict[str, str]):
                 inline,
                 opts ["-output"][0],
             )
+        case "j2p":
+            convert_ipynb_to_py (opts ["-input"][0])
         case _:
             assert False
 
