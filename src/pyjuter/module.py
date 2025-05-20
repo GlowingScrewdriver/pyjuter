@@ -88,7 +88,7 @@ class Module:
     """
     Abstraction of Python source trees and Jupyter Notebooks.
     """
-
+    # TODO[concept]: distinguish Python module and Pyjuter Module
     chunks: list[Chunk]
     metadata: dict
 
