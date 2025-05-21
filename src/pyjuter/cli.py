@@ -33,7 +33,9 @@ def convert_ipynb_to_py (inp: str):
         src = f.read ()
     module = Module.from_ipynb (src)
 
-    print (module.to_py ())
+    for fname, src in module.to_py ().items ():
+        with open (fname, "w") as f:
+            f.write (src)
 
 # Command line parsing utilities
 OPTION_COUNTS = {
@@ -67,7 +69,7 @@ def process_args (args: list[str]):
         # Get the next option
         opt = args.pop (0)
         if not opt.startswith ("-"):
-            raise Exception ("{opt}: Expected an option")
+            raise Exception (f"{opt}: Expected an option")
         if opt not in options:
             raise Exception (
                 f"Invalid option {opt} for command {command}"
@@ -95,13 +97,13 @@ def dispatch_command (cmd: str, opts: dict[str, str]):
         case "p2j":
             inline = []
             for val in opts ["-inline"]:
-                modname, fname = val.split ("=")
-                if not (modname and fname):
+                modname_fname = val.split ("=")
+                if len (modname_fname) != 2:
                     raise Exception (
                         f"Values passed to `-inline` must be of the form\n"
                         "<module name>=<source file>"
                     )
-                inline.append ((modname, fname))
+                inline.append (modname_fname)
             convert_py_to_ipynb (
                 opts ["-input"][0],
                 inline,
