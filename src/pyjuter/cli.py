@@ -1,7 +1,8 @@
-from sys import argv
-from argparse import ArgumentParser
-
 from pyjuter.module import Module
+
+
+class CLIError (Exception):
+    pass
 
 
 # Handler functions implementing each command
@@ -37,55 +38,132 @@ def convert_ipynb_to_py (inp: str):
         with open (fname, "w") as f:
             f.write (src)
 
+
 # Command line parsing utilities
-OPTION_COUNTS = {
-    # Number of allowed values for an option
-    # `None` indicates no restriction
-    "-inline": None,
-    "-input": 1,
-    "-output": 1,
-}
-COMMAND_OPTIONS = {
-    # Options allowed for each command
-    "p2j": {"-inline", "-input", "-output"},
-    "j2p": {"-input"},
+class OptionValues (list):
+    def __init__ (
+        self, count: int, optional: bool,
+        syntax: str, description: str
+    ):
+        super ().__init__ (self)
+        assert count >= -1
+        # TODO: use some word other than "optional"?
+        self.optional, self.count, self.description, self.syntax = (
+            optional, count, description, syntax)
+        self.finished = False
+
+    def read_values (self, args: list [str]):
+        if self.finished:
+            raise CLIError ("Option specified more than once")
+        self.finished = True
+
+        while args and not args [0].startswith ("-"):
+            self.append (args.pop (0))
+        nvals = len (self)
+        if self.count == -1:
+            if nvals < 1:
+                raise CLIError (f"Expected at least 1 value")
+        else:
+            if nvals != self.count:
+                raise CLIError (f"Expected {self.count} values")
+
+class CommandOptions (dict):
+    def __init__ (self, options: dict[str, OptionValues]):
+        super ().__init__ (options)
+
+    def read_options (self, args: list [str]):
+        while args:
+            optname = args.pop (0)
+            if not optname.startswith ("-"):
+                raise CLIError (f"Expected an option: {optname}")
+            option = self.get (optname)
+            if option is None:
+                raise CLIError (f"Invalid option: {optname}")
+            try:
+                option.read_values (args)
+            except CLIError as e:
+                raise CLIError (f"{optname}: {e}")
+
+        # Verify presence of compulsory options
+        for optname, option in self.items ():
+            if option.optional:
+                continue
+            if not option.finished:
+                raise CLIError (f"Missing option: {optname}")
+
+    def options_summary (self):
+        return "\n".join ((
+            "   {:<40}   {}".format (
+                optname + " " + option.syntax, option.description)
+            for optname, option in self.items ()
+        ))
+
+COMMANDS = {
+    "p2j": CommandOptions ({
+        "-input": OptionValues (
+            count = 1, optional = False,
+            syntax = "<filename>",
+            description = "input Python source file"
+        ),
+        "-inline": OptionValues (
+            count = -1, optional = True,
+            syntax = "<modname>=<filename> ...",
+            description = "inline each <filename> as module <modname>"
+        ),
+        "-output": OptionValues (
+            count = 1, optional = False,
+            syntax = "<filename>",
+            description = "output Jupyter Notebook"
+        ),
+    }),
+    "j2p": CommandOptions ({
+        "-input": OptionValues (
+            count = 1, optional = False,
+            syntax = "<filename>",
+            description = "input Jupyter Notebook"
+        ),
+    }),
 }
 
-def process_args (args: list[str]):
-    """
-    Process and verify command-line arguments
-    """
+def print_help (cmdname = None):
+    print ("Usage: -h | pyjuter <subcommand> [-<option1> [<value1> [<value2> ... ]]] ...")
+    if cmdname is None:
+        print (
+            "Run `pyjuter <cmd> -h` for help on subcommand <cmd>\n",
+            "Available subcommands:",
+            *(
+                "  " + cmdname
+                for cmdname in COMMANDS
+            ),
+            sep = "\n"
+        )
+    else:
+        print (
+            f"Available options for subcommand `{cmdname}`",
+            COMMANDS [cmdname].options_summary (),
+            sep = "\n"
+        )
+
+def process_args (args: list [str]):
     if not args:
-        raise Exception ("Expected a command")
-    command = args.pop (0)
-    if command not in COMMAND_OPTIONS:
-        raise Exception (f"Invalid command: {command}")
-    options = {
-        opt: []
-        for opt in COMMAND_OPTIONS [command]
-    }
+        raise CLIError (f"Expected a command")
 
-    while args:
-        # Get the next option
-        opt = args.pop (0)
-        if not opt.startswith ("-"):
-            raise Exception (f"{opt}: Expected an option")
-        if opt not in options:
-            raise Exception (
-                f"Invalid option {opt} for command {command}"
-            )
+    cmdname = args.pop (0)
+    if cmdname.startswith ("-"):
+        if cmdname == "-h":
+            # Make an exception for `pyjuter -h`
+            return "_help", {"cmd": None}
+        raise CLIError (f"Expected a command: {cmdname}")
 
-        # Get the values for this option
-        while args and (not args [0].startswith ("-")):
-            options [opt].append (args.pop (0))
+    command = COMMANDS.get (cmdname)
+    if command is None:
+        raise CLIError (f"Invalid command: {cmdname}")
 
-    for opt in options:
-        ecount = OPTION_COUNTS [opt]
-        if ecount is not None:
-            if len (options [opt]) != ecount:
-                raise Exception (f"Expected {ecount} values for {opt}")
-
-    return command, options
+    # Make an exception for `pyjuter <subcommand> -h`
+    if "-h" in args:
+        return "_help", {"cmd": cmdname}
+    command.read_options (args)
+    return cmdname, command
 
 def dispatch_command (cmd: str, opts: dict[str, str]):
     """
@@ -99,7 +177,7 @@ def dispatch_command (cmd: str, opts: dict[str, str]):
             for val in opts ["-inline"]:
                 modname_fname = val.split ("=")
                 if len (modname_fname) != 2:
-                    raise Exception (
+                    raise CLIError (
                         f"Values passed to `-inline` must be of the form\n"
                         "<module name>=<source file>"
                     )
@@ -111,11 +189,9 @@ def dispatch_command (cmd: str, opts: dict[str, str]):
             )
         case "j2p":
             convert_ipynb_to_py (opts ["-input"][0])
+
+        # The following can only be generated internally
+        case "_help":
+            print_help (opts ["cmd"])
         case _:
             assert False
-
-
-if __name__ == "__main__":
-    # TODO: Help message
-    cmd, opts = process_args (argv [1:])
-    dispatch_command (cmd, opts)
