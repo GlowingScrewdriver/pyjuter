@@ -27,7 +27,7 @@ class Chunk:
     source tree or a cell in a Jupyter Notebook.
     """
 
-    def __init__ (self, source: str, modname: str|None, filename: str):
+    def __init__ (self, source: str, modname: str, filename: str):
         self.source = source
         self.modname = modname
         self.filename = filename
@@ -35,7 +35,7 @@ class Chunk:
     @classmethod
     def from_py (
             cls, source: str, *,
-            modname: str|None = None,
+            modname: str = "",
             filename: str
         ) -> Self:
         "Construct from Python source chunk"
@@ -61,7 +61,7 @@ class Chunk:
 
     def as_nb_cell (self) -> dict:
         "Render as a Jupyter Notebook cell"
-        if self.modname is not None:
+        if self.modname:
             pre = shims.importable_pre.format (module_name = self.modname)
             post = shims.importable_post
             src = "".join ((
@@ -69,13 +69,13 @@ class Chunk:
                 self.source,
                 post,
             ))
-            cell_shims = (
+            cell_shims = [
                 shims.digest (pre, mode = "pre"),
                 shims.digest (post, mode = "post"),
-            )
+            ]
         else:
             src = self.source
-            cell_shims = ()
+            cell_shims = []
 
         return new_pyjuter_code_cell (
             source = src,
@@ -94,6 +94,7 @@ class Module:
     """
     # TODO[concept]: distinguish Python module and Pyjuter Module
     chunks: list[Chunk]
+    metadata: dict
 
     @classmethod
     def from_py (cls, source: str, filename: str) -> Self:
@@ -152,7 +153,7 @@ class Module:
                 source = shims.module_setup_shim,
                 modname = "",
                 filename = "",
-                shims = (),
+                shims = [],
             ),
             *(
                 c.as_nb_cell ()
@@ -216,7 +217,7 @@ def split_toplevel_stmts (source: str) -> Iterable[str]:
 
 def new_pyjuter_code_cell (*,
     source: str,
-    shims: tuple,
+    shims: list,
     filename: str,
     modname: str
 ):

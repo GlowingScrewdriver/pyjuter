@@ -1,4 +1,4 @@
-#!/bin/sh -e
+#!/bin/sh
 
 # Sorry, non-POSIX folks (looking at you, Windows). It's
 # just way too messy writing simple test drivers in Python.

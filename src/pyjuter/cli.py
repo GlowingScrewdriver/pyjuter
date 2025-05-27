@@ -42,14 +42,14 @@ def convert_ipynb_to_py (inp: str):
 # Command line parsing utilities
 class OptionValues (list):
     def __init__ (
-        self, count: int, optional: bool,
+        self, val_count: int, optional: bool,
         syntax: str, description: str
     ):
         super ().__init__ (self)
-        assert count >= -1
+        assert val_count >= -1
         # TODO: use some word other than "optional"?
-        self.optional, self.count, self.description, self.syntax = (
-            optional, count, description, syntax)
+        self.optional, self.val_count, self.description, self.syntax = (
+            optional, val_count, description, syntax)
         self.finished = False
 
     def read_values (self, args: list [str]):
@@ -60,12 +60,12 @@ class OptionValues (list):
         while args and not args [0].startswith ("-"):
             self.append (args.pop (0))
         nvals = len (self)
-        if self.count == -1:
+        if self.val_count == -1:
             if nvals < 1:
                 raise CLIError (f"Expected at least 1 value")
         else:
-            if nvals != self.count:
-                raise CLIError (f"Expected {self.count} values")
+            if nvals != self.val_count:
+                raise CLIError (f"Expected {self.val_count} values")
 
 class CommandOptions (dict):
     def __init__ (self, options: dict[str, OptionValues]):
@@ -101,24 +101,24 @@ class CommandOptions (dict):
 COMMANDS = {
     "p2j": CommandOptions ({
         "-input": OptionValues (
-            count = 1, optional = False,
+            val_count = 1, optional = False,
             syntax = "<filename>",
             description = "input Python source file"
         ),
         "-inline": OptionValues (
-            count = -1, optional = True,
+            val_count = -1, optional = True,
             syntax = "<modname>=<filename> ...",
             description = "inline each <filename> as module <modname>"
         ),
         "-output": OptionValues (
-            count = 1, optional = False,
+            val_count = 1, optional = False,
             syntax = "<filename>",
             description = "output Jupyter Notebook"
         ),
     }),
     "j2p": CommandOptions ({
         "-input": OptionValues (
-            count = 1, optional = False,
+            val_count = 1, optional = False,
             syntax = "<filename>",
             description = "input Jupyter Notebook"
         ),
@@ -175,13 +175,16 @@ def dispatch_command (cmd: str, opts: dict[str, str]):
         case "p2j":
             inline = []
             for val in opts ["-inline"]:
-                modname_fname = val.split ("=")
-                if len (modname_fname) != 2:
-                    raise CLIError (
-                        f"Values passed to `-inline` must be of the form\n"
-                        "<module name>=<source file>"
-                    )
-                inline.append (modname_fname)
+                if "=" in val:
+                    modname, fname = val.split ("=")
+                    if modname and fname:
+                        inline.append ((modname, fname))
+                        continue
+
+                raise CLIError (
+                    f"Values passed to `-inline` must be of the form\n"
+                    "<module name>=<source file>"
+                )
             convert_py_to_ipynb (
                 opts ["-input"][0],
                 inline,
