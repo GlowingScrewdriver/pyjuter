@@ -197,23 +197,23 @@ def split_toplevel_stmts (source: str) -> Iterable[str]:
     An iterator over the resulting chunks (without trailing
     newlines) is returned.
     """
+    # A split is introduced between two top-level statements
+    # that are separated by two or more blank lines.
     chunk: list[str] = []
-    lastline = None
-    for line in source.split ("\n"):
-        if line:
-            if not line [0].isspace ():
-                # This is the beginning of a statement ... ->
-                if lastline == "":
-                   # -> ... after a blank line
-                   yield "\n".join (chunk)
-                   chunk = []
+    for char in source:
+        if (
+            chunk [-3:] == ["\n", "\n", "\n"] and
+            not char.isspace ()
+        ):
+            # Top-level statement following at least 2 blanks
+            yield "".join (chunk [:-1])
+            chunk = []
 
-        chunk.append (line)
-        lastline = line
+        chunk.append (char)
 
     # Don't forget the last chunk!
     if chunk:
-        yield "\n".join (chunk)
+        yield "".join (chunk)
 
 def new_pyjuter_code_cell (*,
     source: str,
