@@ -37,7 +37,7 @@ jobs:
 
   # Deploy the artifact from `build` to Pages
   deploy:
-    needs: build
+    needs: ci
     runs-on: ubuntu-latest
     steps:
       - name: Deploy docs
