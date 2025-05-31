@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  push:
+    branches: [ "master" ]
+
+  workflow_dispatch:
+
+permissions:
+  # Reference: https://github.com/actions/deploy-pages?tab=readme-ov-file#security-considerations
+  id-token: write
+  pages: write
+
+jobs:
+  # Install the package and use Pdoc to generate documentation
+  # Results are uploaded as a Pages artifact
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up CI
+        run: |
+          cd ci
+          ./ci.sh setup
+
+      - name: Generate docs
+        run: |
+          cd ci
+          ./ci.sh docs
+
+      - name: Upload docs artifact
+        id: docs
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site/api-docs/
+
+  # Deploy the artifact from `build` to Pages
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy docs
+        id: docs
+        uses: actions/deploy-pages@v4
