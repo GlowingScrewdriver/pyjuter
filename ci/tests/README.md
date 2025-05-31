@@ -21,7 +21,7 @@ ecosystem.
 
 ## Dependencies
 The tests use Pyjuter and some Jupyter utilies,
-enumerated in `requirements.txt`.
+enumerated in `../requirements.txt`.
 
 ## Running the tests
 To run all tests,
