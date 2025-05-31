@@ -1,0 +1,14 @@
+# TODO: Should we put this in setup.cfg?
+
+# This project
+-e ../
+
+# Tests
+nbclient
+ipykernel
+
+# Type checking
+mypy
+
+# API docs
+pdoc

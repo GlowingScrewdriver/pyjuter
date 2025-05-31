@@ -2,42 +2,48 @@ name: CI
 
 on:
   push:
-    branches: [ "master" ]
+    branches: [ "master", "ci", "ci-*" ]
 
   workflow_dispatch:
 
 permissions:
-  # Reference: https://github.com/actions/deploy-pages?tab=readme-ov-file#security-considerations
-  id-token: write
+  id-token: write  # Reference: [1]
   pages: write
 
 jobs:
   # Install the package and use Pdoc to generate documentation
   # Results are uploaded as a Pages artifact
-  build:
+  ci:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up a Venv
+      - name: Set up CI
         run: |
-          python3 -m venv ./venv
-          ./venv/bin/pip3 install . pdoc
+          cd ci
+          ./ci.sh setup
 
       - name: Generate docs
-        run: ./venv/bin/python3 -m pdoc pyjuter -o gen-docs
+        run: |
+          cd ci
+          ./ci.sh docs
 
       - name: Upload docs artifact
         id: docs
         uses: actions/upload-pages-artifact@v3
         with:
-          path: gen-docs/
+          path: ci/site/api-docs/
 
   # Deploy the artifact from `build` to Pages
   deploy:
-    needs: build
+    needs: ci
     runs-on: ubuntu-latest
+    if: ${{ github.ref == 'refs/heads/ci' }}  # Reference: [2]
     steps:
       - name: Deploy docs
         id: docs
         uses: actions/deploy-pages@v4
+
+# References:
+# 1. https://github.com/actions/deploy-pages?tab=readme-ov-file#security-considerations
+# 2. https://docs.github.com/en/actions/writing-workflows/choosing-what-your-workflow-does/accessing-contextual-information-about-workflow-runs
