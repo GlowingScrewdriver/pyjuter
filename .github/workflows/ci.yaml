@@ -2,13 +2,12 @@ name: CI
 
 on:
   push:
-    branches: [ "master" ]
+    branches: [ "master", "ci", "ci-*" ]
 
   workflow_dispatch:
 
 permissions:
-  # Reference: https://github.com/actions/deploy-pages?tab=readme-ov-file#security-considerations
-  id-token: write
+  id-token: write  # Reference: [1]
   pages: write
 
 jobs:
@@ -33,13 +32,18 @@ jobs:
         id: docs
         uses: actions/upload-pages-artifact@v3
         with:
-          path: site/api-docs/
+          path: ci/site/api-docs/
 
   # Deploy the artifact from `build` to Pages
   deploy:
-    needs: build
+    needs: ci
     runs-on: ubuntu-latest
+    if: ${{ github.ref == 'refs/heads/ci' }}  # Reference: [2]
     steps:
       - name: Deploy docs
         id: docs
         uses: actions/deploy-pages@v4
+
+# References:
+# 1. https://github.com/actions/deploy-pages?tab=readme-ov-file#security-considerations
+# 2. https://docs.github.com/en/actions/writing-workflows/choosing-what-your-workflow-does/accessing-contextual-information-about-workflow-runs
