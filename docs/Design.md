@@ -109,8 +109,9 @@ the code in a cell and use them to populate an object,
 which is then discovered and used as a module by
 Python's import system.
 
+<!-- TODO[doc]: link to pyjuter.shims -->
 You can see the shim definitions in
-[pyjuter.shims](../src/pyjuter/shims.py). For
+pyjuter.shims. For
 injection (during conversion to a Notebook) and
 stripping (during conversion from a Notebook) logic,
 refer to `Chunk.from_ipynb` and `Chunk.as_nb_cell`
