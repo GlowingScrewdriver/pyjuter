@@ -1,3 +1,22 @@
+[project]
+name = "Pyjuter"
+version = "0.1.0"
+authors = [
+    {name = "Vedanth Padmaraman", email = "vedanthpadmaraman0566@gmail.com"},
+]
+maintainers = [
+    {name = "Vedanth Padmaraman", email = "vedanthpadmaraman0566@gmail.com"},
+]
+description = "Convert between Python source trees and Jupyter Notebooks with ease."
+readme = "README.md"
+dependencies = [
+    "nbformat",
+]
+
+[project.urls]
+homepage = "https://glowingscrewdriver.github.io/pyjuter/"
+source = "https://github.com/GlowingScrewdriver"
+
 [build-system]
 requires = ["setuptools"]
 build-backend = "setuptools.build_meta"
