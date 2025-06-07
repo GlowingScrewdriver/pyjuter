@@ -11,29 +11,33 @@ _activate () {
     . venv/bin/activate
 }
 
-setup () {
+setup () {      ## Set a venv for the CI
     # Set up a virtual environment for CI
     python3 -m venv venv
     venv/bin/pip install -r requirements.txt
 }
 
-tests () {
+tests () {      ## Run the test suite
     # Pyjuter's test suite
     cd tests
     ./run-tests.sh
 }
 
-typecheck () {
+typecheck () {  ## Run static type-checking
     # Static type-checking
     mypy
 }
 
-docs () {
+docs () {       ## Build the documentation site
     mkdir -p site
-    cd site
+
+    # Render markdown docs
+    cd mkdocs
+    mkdocs build -d ../site/
+    cd ..
 
     # Generate API docs
-    pdoc pyjuter -o api-docs
+    pdoc pyjuter -o site/api-docs
 }
 
 case "$1" in
@@ -51,7 +55,9 @@ tests|typecheck|docs)
     set +x
     ;;
 "")
-    echo "Please specify a task name"
+    echo "Usage: ./ci.sh <task>"
+    echo "Available tasks:"
+    sed -ne 's/() {\( *#\)#/\1/p' $0
     false
     ;;
 *)

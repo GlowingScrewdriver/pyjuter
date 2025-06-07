@@ -32,7 +32,7 @@ jobs:
         id: docs
         uses: actions/upload-pages-artifact@v3
         with:
-          path: ci/site/api-docs/
+          path: ci/site/
 
   # Deploy the artifact from `build` to Pages
   deploy:
