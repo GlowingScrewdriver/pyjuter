@@ -1,0 +1,9 @@
+site_name: Pyjuter Documentation
+docs_dir: pages
+exclude_docs: |
+  *.sh
+  !/docs/
+theme:
+  name: mkdocs
+  color_mode: dark
+use_directory_urls: false
