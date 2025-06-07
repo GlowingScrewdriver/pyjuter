@@ -12,21 +12,25 @@ flow is something like this:
 
 1. An existing Python source tree is converted to a Notebook,
    using Pyjuter.
-2. The Notebook is used for development, and changes may be
-   made to it.
+2. The Notebook is used for development, on a platform such
+   as JupyterLab, and changes may be made to it.
 3. The Notebook is converted back to a source tree and
    merged with the original Python sources.
 
-There are some conditions that Pyjuter tries to fulfil:
+There are some conditions that Pyjuter tries to fulfil
+during the process:
 
 * Long code sequences in the Python sources are split into
-  multiple cells in the Notebook, in step (1)
+  multiple cells in the Notebook, in step (1)  
+  See 'Chunks' below for details on how this is achieved.
 * The resulting source tree from (3) should accurately
   reflect changes made in (2). That is, if a single line
   is changed in the Notebook, only that line is changed
   in the source tree.
 * Modifications to the code between conversions should
-  be minimal.
+  be minimal.  
+  See 'Import Shims' below to understand how imported
+  modules are dealt with.
 
 The following sections detail the aspects of Pyjuter's
 design that make this possible.
@@ -83,24 +87,31 @@ Pyjuter works
 Now, we consider the issue of constructing a
 Notebook from these files. Structurally, a Notebook
 is a single program; the concept of a module does
-not exist within Notebooks. A bit of hackery is
+not exist within Notebooks. Thus, bit of hackery is
 needed to make the above example work in a
 Notebook.
 
+Part of the problem is solved by _inlining_ imported
+modules -- that is, the sources of the imported
+modules are included in the Notebook. However, in
+order for the code to work, the contents of the
+inlined modules need to be accessible via `import`
+statements, they way they are in plain Python.
+
 To achieve this, _import shims_ are used for each
-cell (here I say "shim" to mean a piece of code
-that is injected into the cell's code), in addition
-to one cell containing supporting code at the beginning
-of the notebook. Additionally, a module name is
-associated with each cell. What the shims do is to
-collect the names defined by the code in a cell
-and use them to populate an object, which is
-then discovered and used as a module by Python's
-import system.
+cell containing inlined code (here I say "shim" to
+mean a piece of code that is injected into the cell's
+code), in addition to one cell containing supporting
+code at the beginning of the notebook. Additionally,
+a module name is associated with each inlined cell.
+What the shims do is to collect the names defined by
+the code in a cell and use them to populate an object,
+which is then discovered and used as a module by
+Python's import system.
 
 You can see the shim definitions in
 [pyjuter.shims](../src/pyjuter/shims.py). For
-application (during Notebook construction) and
-stripping (during Notebook loading) logic, refer
-to `Chunk.from_ipynb` and `Chunk.as_nb_cell` in
-[pyjuter.module](../src/pyjuter/module.py).
+injection (during conversion to a Notebook) and
+stripping (during conversion from a Notebook) logic,
+refer to `Chunk.from_ipynb` and `Chunk.as_nb_cell`
+in pyjuter.module.
