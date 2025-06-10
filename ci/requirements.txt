@@ -13,3 +13,6 @@ mypy
 # API docs
 pdoc
 mkdocs
+
+# Packaging
+build

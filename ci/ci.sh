@@ -11,8 +11,9 @@ _activate () {
     . venv/bin/activate
 }
 
-setup () {      ## Set a venv for the CI
+setup () {      ## Set up a fresh venv for the CI
     # Set up a virtual environment for CI
+    rm -rf venv
     python3 -m venv venv
     venv/bin/pip install -r requirements.txt
 }
@@ -40,6 +41,10 @@ docs () {       ## Build the documentation site
     pdoc pyjuter -o site/api-docs
 }
 
+package () {    ## Build the Python package
+    python3 -m build --outdir dist ../
+}
+
 case "$1" in
 setup)
     # Tasks that don't need the venv
@@ -47,7 +52,7 @@ setup)
     $1
     set +x
     ;;
-tests|typecheck|docs)
+tests|typecheck|docs|package)
     # Tasks that need the venv
     _activate
     set -x
