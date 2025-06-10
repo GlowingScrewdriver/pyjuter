@@ -15,17 +15,25 @@ jobs:
   # Results are uploaded as a Pages artifact
   ci:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./ci
+
     steps:
       - uses: actions/checkout@v4
 
       - name: Set up CI
         run: |
-          cd ci
           ./ci.sh setup
+
+      - name: Tests
+        run: ./ci.sh tests
+
+      - name: Static Type-Checking
+        run: ./ci.sh typecheck
 
       - name: Generate docs
         run: |
-          cd ci
           ./ci.sh docs
 
       - name: Upload docs artifact
@@ -33,6 +41,9 @@ jobs:
         uses: actions/upload-pages-artifact@v3
         with:
           path: ci/site/
+
+      - name: Build Package
+        run: ./ci.sh package
 
   # Deploy the artifact from `build` to Pages
   deploy:
