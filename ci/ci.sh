@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/sh -e
 
 ### Automation of Continous Integration tasks ###
 # This script is an effort to keep Pyjuter's CI 
@@ -50,14 +50,12 @@ setup)
     # Tasks that don't need the venv
     set -x
     $1
-    set +x
     ;;
 tests|typecheck|docs|package)
     # Tasks that need the venv
     _activate
     set -x
     $1
-    set +x
     ;;
 "")
     echo "Usage: ./ci.sh <task>"

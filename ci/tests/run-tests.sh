@@ -5,23 +5,28 @@
 #
 # So, POSIX shell it is.
 
-report () {
-    [ "$2" = "0" ] \
-        && status="success" \
-        || status="failure"
-
-    echo "$1: $status"
-}
-
 run_tests () {
+    fails=""
     for entry in *; do
         if [ -d $entry ] && [ -f $entry/test.sh ]; then
             cd $entry
-            sh -e ./test.sh > log
-            report $entry $?
+            # Run the test and capture its status
+            if sh -e ./test.sh > log; then
+                status="success"
+            else
+                status="failure"
+                fails="$fails $entry"
+            fi
+            echo "$entry: $status"
             cd ..
         fi
     done
+
+    # Report failing tests
+    if [ "$fails" != "" ]; then
+        echo "Failing tests: $fails"
+        false
+    fi
 }
 
 run_tests
